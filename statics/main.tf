@@ -47,14 +47,19 @@ resource "aws_db_instance" "dnd_postgres" {
   password                = var.db_password
   db_subnet_group_name    = aws_db_subnet_group.dnd_postgres.name
   vpc_security_group_ids  = [aws_security_group.dnd_postgres_sg.id]
-  skip_final_snapshot     = false
+  skip_final_snapshot     = true
   publicly_accessible     = false
   backup_retention_period = 7
   multi_az                = false
+  storage_encrypted       = true
+
 
   tags = {
     Name = "dnd-forum-postgres"
   }
 }
 
-
+resource "aws_db_snapshot" "Snap" {
+  db_instance_identifier = aws_db_instance.dnd_postgres.identifier
+  db_snapshot_identifier = "Snap1000"
+}

@@ -1,3 +1,7 @@
+provider "aws" {
+    region = var.aws_region
+  }
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.31"
@@ -6,10 +10,7 @@ module "eks" {
   cluster_version = "1.32"
   # Optional
   cluster_endpoint_public_access = true
-    cluster_encryption_config = {
-      resources       = ["secrets"]
-      kms_key_arn = aws_kms_key.a
-  }
+
 
   # Optional: Adds the current caller identity as an administrator via cluster access entry
   enable_cluster_creator_admin_permissions = true
@@ -19,16 +20,34 @@ module "eks" {
     node_pools = ["general-purpose"]
   }
 
-  vpc_id     = var.vpc_id
-  subnet_ids = ["subnet-07e4939eae8fcd6bb", "subnet-04181d7c9e2cc0f09", ]
-  control_plane_subnet_ids = ["subnet-07c91559f4c8535ae", "subnet-09d75a39c650da09c" ]
-  
-  eks_managed_node_groups = {
-    default = {
-      instance_types = ["t3.small"]
-      desired_size   = 1
-      max_size   = 2
-      min_size   = 1
+  eks_managed_node_group_defaults = {
+    ami_type = "AL2023_x86_64_STANDARD"
+  }
+
+  vpc_id     = var.vpc_id  
+    subnet_ids = ["subnet-07e4939eae8fcd6bb", "subnet-04181d7c9e2cc0f09", ]
+    control_plane_subnet_ids = ["subnet-07c91559f4c8535ae", "subnet-09d75a39c650da09c" ]
+
+    eks_managed_node_groups = {
+
+    one = {
+      name = "node-group-1"
+
+      instance_types = ["t3.medium"]
+
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
+    }
+
+    two = {
+      name = "node-group-2"
+
+      instance_types = ["t3.medium"]
+
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
     }
   }
   tags = {
@@ -41,11 +60,23 @@ module "eks" {
     coredns                = {}
     eks-pod-identity-agent = {}
     kube-proxy             = {}
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+    }
   }
 }
 
-resource "aws_kms_key" "a" {
-  description             = "An example symmetric encryption KMS key"
-  enable_key_rotation     = true
-  deletion_window_in_days = 7
+data "aws_iam_policy" "ebs_csi_policy" {
+  arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+
+module "irsa-ebs-csi" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version = "5.39.0"
+
+  create_role                   = true
+  role_name                     = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
+  provider_url                  = module.eks.oidc_provider
+  role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
+  oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
 }
