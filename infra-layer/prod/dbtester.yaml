@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dbtester
+spec:
+  containers:
+  - name: dbtester
+    image: postgres:15
+    command: ["sleep", "3600"]
+
