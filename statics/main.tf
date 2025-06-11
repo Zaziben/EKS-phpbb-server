@@ -20,7 +20,7 @@ resource "aws_security_group" "dnd_postgres_sg" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr_block]
+    cidr_blocks = 10.0.0.0/16
     description = "Allow PostgreSQL from within VPC"
   }
 

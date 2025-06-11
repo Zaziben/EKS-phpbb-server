@@ -36,9 +36,10 @@ module "eks" {
   }
    
   cluster_addons = {
-    metrics_server = {}
     eks-pod-identity-agent = {}
     aws-ebs-csi-driver = {}
+    vpc-cni = {}
+
   }
 }
 
