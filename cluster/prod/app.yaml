@@ -1,0 +1,79 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dnd-app
+  namespace: dnd-forum
+  labels:
+    app: dnd-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnd-app
+  template:
+    metadata:
+      labels:
+        app: dnd-app
+    spec:
+      containers:
+      - name: dnd-app
+        image: 731945947682.dkr.ecr.us-east-1.amazonaws.com/dnd-forum:latest
+        ports:
+        - containerPort: 8080 # change if your app listens on another port
+        env:
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_HOST
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnd-app-svc
+  namespace: dnd-forum
+spec:
+  selector:
+    app: dnd-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080 # Port exposed in your Dockerfile
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dnd-app-ing
+  namespace: dnd-forum
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dnd-app-svc
+            port:
+              number: 80
+
