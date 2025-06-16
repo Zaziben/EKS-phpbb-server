@@ -21,27 +21,9 @@ spec:
         image: 731945947682.dkr.ecr.us-east-1.amazonaws.com/dnd-forum:latest
         ports:
         - containerPort: 8080 # change if your app listens on another port
-        env:
-        - name: POSTGRES_HOST
-          valueFrom:
-            secretKeyRef:
+        envFrom:
+          - secretRef:
               name: postgres-secret
-              key: POSTGRES_HOST
-        - name: POSTGRES_DB
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_DB
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_PASSWORD
 ---
 apiVersion: v1
 kind: Service
