@@ -1,0 +1,70 @@
+ApiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dnd-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnd-app
+  template:
+    metadata:
+      labels:
+        app: dnd-app
+    spec:
+      containers:
+      - name: dnd-app
+        image: bitnami/phpbb:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PHPBB_DATABASE_TYPE
+          value: "postgresql"
+        - name: PHPBB_DATABASE_HOST
+          value: "dnd-forum-postgres.cyoqouaspcrb.us-east-1.rds.amazonaws.com"
+        - name: PHPBB_DATABASE_NAME
+          value: "dnd_forum"
+        - name: PHPBB_DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: PHPBB_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnd-app-svc
+  namespace: dnd-forum
+spec:
+  selector:
+    app: dnd-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080 # Port exposed in your Dockerfile
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dnd-app-ing
+  namespace: dnd-forum
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dnd-app-svc
+            port:
+              number: 80
