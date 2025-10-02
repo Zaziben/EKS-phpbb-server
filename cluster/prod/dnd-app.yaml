@@ -1,7 +1,8 @@
-ApiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dnd-app
+  namespace: dnd-forum
 spec:
   replicas: 1
   selector:
@@ -14,26 +15,18 @@ spec:
     spec:
       containers:
       - name: dnd-app
-        image: bitnami/phpbb:latest
+        image: phpbb/phpbb:3.3-apache
         ports:
         - containerPort: 8080
-        env:
-        - name: PHPBB_DATABASE_TYPE
-          value: "postgresql"
-        - name: PHPBB_DATABASE_HOST
-          value: "dnd-forum-postgres.cyoqouaspcrb.us-east-1.rds.amazonaws.com"
-        - name: PHPBB_DATABASE_NAME
-          value: "dnd_forum"
-        - name: PHPBB_DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_USER
-        - name: PHPBB_DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: config
+          mountPath: /var/www/html/config.php
+          subPath: config.php
+        volumes:
+        - name: config
+          secret:
+            secretName: phpbb-config
+ 
 ---
 apiVersion: v1
 kind: Service
