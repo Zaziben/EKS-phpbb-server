@@ -20,7 +20,7 @@ resource "aws_security_group" "dnd_postgres_sg" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = 10.0.0.0/16
+    cidr_blocks = ["10.0.0.0/16"]
     description = "Allow PostgreSQL from within VPC"
   }
 
@@ -59,7 +59,34 @@ resource "aws_db_instance" "dnd_postgres" {
   }
 }
 
-resource "aws_db_snapshot" "Snap" {
-  db_instance_identifier = aws_db_instance.dnd_postgres.identifier
-  db_snapshot_identifier = "Snap1000"
+resource "aws_s3_bucket" "s3" {
+  bucket = "dnd-forum-s3-jv"
+  
+  tags = {
+    Name = "phpBB ersatz file system"
+    Environment = "dev"
+  }
 }
+
+resource "aws_s3_bucket_ownership_controls" "ownershipdnd" {
+  bucket = aws_s3_bucket.s3.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "pbdnd" {
+  bucket = aws_s3_bucket.s3.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_acl" "acldnd" {
+    depends_on = [aws_s3_bucket_ownership_controls.ownershipdnd]
+      bucket     = aws_s3_bucket.s3.id
+        acl        = "private"
+}
+

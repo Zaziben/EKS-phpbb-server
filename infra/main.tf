@@ -43,3 +43,64 @@ module "eks" {
   }
 }
 
+data "aws_s3_bucket" "s3" {
+  bucket = "dnd-forum-s3-jv"  # e.g., from output of your static stack
+}
+
+# IAM role for phpBB ServiceAccount
+
+resource "aws_iam_role" "phpbb_irsa" {
+  name = "eks-s3-phpbb-access-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = module.eks.oidc_provider_arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:dnd-forum:phpbb"
+          }
+        }
+      }
+    ]
+  })
+}
+# IAM policy granting access to the S3 bucket
+data "aws_iam_policy_document" "phpbb_s3_access" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = [aws_iam_role.phpbb_irsa.arn]
+    }
+
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      data.aws_s3_bucket.s3.arn,
+      "${data.aws_s3_bucket.s3.arn}/*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "phpbb_s3_policy" {
+  name   = "phpbb-s3-policy"
+  policy = data.aws_iam_policy_document.phpbb_s3_access.json
+}
+
+resource "aws_iam_role_policy_attachment" "phpbb_s3_attach" {
+  role       = aws_iam_role.phpbb_irsa.name
+  policy_arn = aws_iam_policy.phpbb_s3_policy.arn
+}
+

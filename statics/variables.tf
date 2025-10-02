@@ -1,4 +1,6 @@
-variable "vpc_id" {}
+variable "vpc_id" {
+  default = "vpc-0abae96f5ad67cf3d"
+}
 variable "private_subnet_ids" {
   type = list(string)
   default = ["subnet-0803c64790ed730d9", "subnet-09d75a39c650da09c", "subnet-07c91559f4c8535ae"]

@@ -17,3 +17,16 @@ output "cluster_name" {
   description = "Kubernetes Cluster Name"
   value       = module.eks.cluster_name
 }
+
+output "phpbb_irsa_role_arn" {
+  value = aws_iam_role.phpbb_irsa.arn
+}
+
+
+output "oidc_provider_arn" {
+  value = module.eks.oidc_provider_arn
+}
+
+output "oidc_provider" {
+  value = module.eks.oidc_provider
+}
