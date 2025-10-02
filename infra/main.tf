@@ -74,12 +74,6 @@ resource "aws_iam_role" "phpbb_irsa" {
 data "aws_iam_policy_document" "phpbb_s3_access" {
   statement {
     effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = [aws_iam_role.phpbb_irsa.arn]
-    }
-
     actions = [
       "s3:PutObject",
       "s3:GetObject",
