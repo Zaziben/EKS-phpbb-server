@@ -7,23 +7,21 @@ module "eks" {
   version = "~> 21.3.2"
 
   name    = var.cluster_name
-  kubernetes_version = "1.32"
-  # Optional
+  kubernetes_version = "1.33"
   endpoint_public_access = true
 
 
-  # Optional: Adds the current caller identity as an administrator via cluster access entry
   enable_cluster_creator_admin_permissions = true
+  enable_irsa = true
+  include_oidc_root_ca_thumbprint = true
 
   vpc_id     = var.vpc_id  
-    subnet_ids = ["subnet-048916d83b3d6dcf1", "subnet-07e4939eae8fcd6bb", "subnet-04181d7c9e2cc0f09", ]
+  subnet_ids = ["subnet-048916d83b3d6dcf1", "subnet-07e4939eae8fcd6bb", "subnet-04181d7c9e2cc0f09", ]
 
 
   eks_managed_node_groups = {  
-    one = {
+    group1 = {
       ami_type = "AL2023_x86_64_STANDARD"
-      name = "node-group-1"
-
       instance_types = ["t3.medium"]
 
       min_size     = 1
@@ -33,27 +31,25 @@ module "eks" {
   }
    
   addons = {
-    eks-pod-identity-agent = {}
-    aws-ebs-csi-driver = {}
-    vpc-cni = {}
+    coredns = {}
+    eks-pod-identity-agent = {
+      before_compute = true
+    }
+    vpc-cni = {
+      before_compute = true
+    }
+    kube-proxy = {}
 
   }
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
+
 }
 
 data "aws_s3_bucket" "s3" {
-  bucket = "dnd-forum-s3-jv"  # e.g., from output of your static stack
-}
-
-# IAM role for phpBB ServiceAccount
-
-data "tls_certificate" "eks" {
-  url = var.oidc_issuer_url
-}
-
-resource "aws_iam_openid_connect_provider" "eks" {
-  url             = var.oidc_issuer_url
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  bucket = "dnd-forum-s3-jv"
 }
 
 resource "aws_iam_role" "phpbb_irsa" {
@@ -77,7 +73,6 @@ resource "aws_iam_role" "phpbb_irsa" {
     ]
   })
 }
-# IAM policy granting access to the S3 bucket
 data "aws_iam_policy_document" "phpbb_s3_access" {
   statement {
     effect = "Allow"

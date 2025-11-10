@@ -16,7 +16,3 @@ variable "vpc_id" {
   default = "vpc-0abae96f5ad67cf3d"
 }
 
-variable "oidc_issuer_url" {
-  type        = string
-  description = "The OIDC issuer URL from the EKS cluster"
-}

@@ -31,6 +31,3 @@ output "oidc_provider" {
   value = module.eks.oidc_provider
 }
 
-output "oidc_issuer_url" {
-  value = aws_eks_cluster.this.identity[0].oidc[0].issuer 
-}
