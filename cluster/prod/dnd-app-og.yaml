@@ -28,18 +28,6 @@ spec:
           image: 731945947682.dkr.ecr.us-east-1.amazonaws.com/dnd-forum:latest
           ports:
             - containerPort: 80
-          envFrom:
-            - secretRef:
-                name: db-secret
-          volumeMounts:
-            # Mount config.php from Secret into phpBB directory
-            - name: phpbb-config
-              mountPath: /var/www/html/config.php
-              subPath: config.php
-      volumes:
-        - name: phpbb-config
-          secret:
-            secretName: db-secret
 ---
 apiVersion: v1
 kind: Service
