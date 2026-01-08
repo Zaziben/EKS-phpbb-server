@@ -75,17 +75,33 @@ resource "aws_iam_role" "phpbb_irsa" {
 }
 data "aws_iam_policy_document" "phpbb_s3_access" {
   statement {
+    sid    = "MountpointFullBucketAccess"
     effect = "Allow"
+
     actions = [
-      "s3:PutObject",
-      "s3:GetObject",
-      "s3:DeleteObject",
       "s3:ListBucket"
     ]
 
     resources = [
-      data.aws_s3_bucket.s3.arn,
-      "${data.aws_s3_bucket.s3.arn}/*"
+      "arn:aws:s3:::dnd-forum-s3-jv"
+    ]
+  }
+
+  statement {
+    sid    = "MountpointFullObjectAccess"
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject"
+    ]
+
+    resources = [
+      "arn:aws:s3:::dnd-forum-s3-jv/files/*",
+      "arn:aws:s3:::dnd-forum-s3-jv/avatars/*",
+      "arn:aws:s3:::dnd-forum-s3-jv/store/*",
     ]
   }
 }
