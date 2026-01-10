@@ -66,7 +66,7 @@ resource "aws_iam_role" "phpbb_irsa" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
-            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:dnd-forum:dnd-sa"
+            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:dnd-forum:phpbb"
           }
         }
       }
@@ -96,6 +96,12 @@ data "aws_iam_policy_document" "phpbb_s3_access" {
       "s3:PutObject",
       "s3:AbortMultipartUpload",
       "s3:DeleteObject"
+    ]
+
+    resources = [
+      "arn:aws:s3:::dnd-forum-s3-jv/files/*",
+      "arn:aws:s3:::dnd-forum-s3-jv/avatars/*",
+      "arn:aws:s3:::dnd-forum-s3-jv/store/*",
     ]
   }
 }
