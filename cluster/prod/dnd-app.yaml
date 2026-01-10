@@ -36,10 +36,18 @@ spec:
             - name: phpbb-config
               mountPath: /var/www/html/config.php
               subPath: config.php
+            - name: fuse
+              mountPath: /dev/fuse
+          securityContext: 
+            privileged: true
       volumes:
         - name: phpbb-config
           secret:
             secretName: db-secret
+        - name: fuse
+          hostPath:
+            path: /dev/fuse
+            type: CharDevice
 ---
 apiVersion: v1
 kind: Service
