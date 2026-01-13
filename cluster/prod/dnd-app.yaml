@@ -7,6 +7,14 @@ metadata:
     # This ARN comes from the IRSA IAM role you created in Terraform
     eks.amazonaws.com/role-arn: arn:aws:iam::731945947682:role/eks-s3-phpbb-access-role
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alb-dnd-sa
+  namespace: kube-system
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::731945947682:role/aws-load-balancer-controller
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -61,7 +69,7 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 80 # Port exposed in your Dockerfile
-  type: ClusterIP
+  type: LoadBalancer
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -69,9 +77,13 @@ metadata:
   name: dnd-app-ing
   namespace: dnd-forum
   annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
     nginx.ingress.kubernetes.io/rewrite-target: /
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: '80'
+
 spec:
-  ingressClassName: nginx
+  ingressClassName: alb
   rules:
   - http:
       paths:
