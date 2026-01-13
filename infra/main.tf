@@ -66,7 +66,7 @@ resource "aws_iam_role" "phpbb_irsa" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
-            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:dnd-forum:phpbb"
+            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:dnd-forum:dnd-sa"
           }
         }
       }
@@ -99,9 +99,7 @@ data "aws_iam_policy_document" "phpbb_s3_access" {
     ]
 
     resources = [
-      "arn:aws:s3:::dnd-forum-s3-jv/files/*",
-      "arn:aws:s3:::dnd-forum-s3-jv/avatars/*",
-      "arn:aws:s3:::dnd-forum-s3-jv/store/*",
+      "arn:aws:s3:::dnd-forum-s3-jv/*",
     ]
   }
 }
@@ -114,5 +112,104 @@ resource "aws_iam_policy" "phpbb_s3_policy" {
 resource "aws_iam_role_policy_attachment" "phpbb_s3_attach" {
   role       = aws_iam_role.phpbb_irsa.name
   policy_arn = aws_iam_policy.phpbb_s3_policy.arn
+}
+
+data "aws_iam_policy_document" "alb_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks.oidc_provider_arn]
+    }
+
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.oidc_provider, "https://", "")}:sub"
+      values   = [
+        "system:serviceaccount:kube-system:alb-dnd-sa"
+      ]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "alb_controller" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "iam:CreateServiceLinkedRole",
+      "ec2:DescribeAccountAttributes",
+      "ec2:DescribeAddresses",
+      "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeInternetGateways",
+      "ec2:DescribeVpcs",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeInstances",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeTags",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeListenerCertificates",
+      "elasticloadbalancing:DescribeSSLPolicies",
+      "elasticloadbalancing:DescribeRules",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:DescribeTags",
+      "elasticloadbalancing:DescribeListenerAttributes"
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateSecurityGroup",
+      "ec2:DeleteSecurityGroup",
+      "ec2:DescribeSecurityGroups",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:CreateTags",
+      "ec2:DeleteTags",
+      "elasticloadbalancing:CreateRule",
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:RemoveTags",
+      "elasticloadbalancing:RegisterTargets",
+      "elasticloadbalancing:DeregisterTargets"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "alb_controller" {
+  name   = "AWSLoadBalancerControllerPolicy"
+  policy = data.aws_iam_policy_document.alb_controller.json
+}
+
+resource "aws_iam_role" "alb_controller" {
+  name               = "aws-load-balancer-controller"
+  assume_role_policy = data.aws_iam_policy_document.alb_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "alb_attach" {
+  role       = aws_iam_role.alb_controller.name
+  policy_arn = aws_iam_policy.alb_controller.arn
 }
 
