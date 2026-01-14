@@ -178,6 +178,7 @@ data "aws_iam_policy_document" "alb_controller" {
       "ec2:RevokeSecurityGroupIngress",
       "ec2:CreateTags",
       "ec2:DeleteTags",
+      "elasticloadbalancing:ModifyRule",
       "elasticloadbalancing:CreateRule",
       "elasticloadbalancing:CreateLoadBalancer",
       "elasticloadbalancing:CreateTargetGroup",
