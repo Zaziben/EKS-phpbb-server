@@ -69,7 +69,7 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 80 # Port exposed in your Dockerfile
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -77,11 +77,11 @@ metadata:
   name: dnd-app-ing
   namespace: dnd-forum
   annotations:
+    alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/scheme: internet-facing
-    nginx.ingress.kubernetes.io/rewrite-target: /
     alb.ingress.kubernetes.io/healthcheck-path: /
     alb.ingress.kubernetes.io/healthcheck-port: '80'
-
+    alb.ingress.kubernetes.io/success-codes: "200,302"
 spec:
   ingressClassName: alb
   rules:
