@@ -90,3 +90,43 @@ resource "aws_s3_bucket_acl" "acldnd" {
         acl        = "private"
 }
 
+# Step 1: Request the ACM certificate (DNS validation)
+resource "aws_acm_certificate" "forum" {
+  domain_name               = "forum.thegradyproject.com"
+  validation_method         = "DNS"
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "forum-thegradyproject-com"
+  }
+}
+
+# Step 2: Get the Route 53 hosted zone
+data "aws_route53_zone" "thegradyproject" {
+  name         = "thegradyproject.com."
+  private_zone = false
+}
+
+resource "aws_route53_record" "forum_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.forum.domain_validation_options : dvo.domain_name => dvo
+  }
+
+  name    = each.value.resource_record_name
+  type    = each.value.resource_record_type
+  zone_id = data.aws_route53_zone.thegradyproject.zone_id
+  records = [each.value.resource_record_value]
+  ttl     = 300
+}
+
+resource "aws_acm_certificate_validation" "forum" {
+  certificate_arn = aws_acm_certificate.forum.arn
+
+  validation_record_fqdns = [
+    for r in aws_route53_record.forum_validation : r.fqdn
+  ]
+}
+
+

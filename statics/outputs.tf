@@ -10,3 +10,7 @@ output "dnd-forum-s3-jv-id" {
 output "dnd-forum-s3-jv-arn" {
   value = aws_s3_bucket.s3.arn
 }
+
+output "aws_acm_certificate" {
+  value = aws_acm_certificate.forum.arn
+}

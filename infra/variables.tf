@@ -16,3 +16,8 @@ variable "vpc_id" {
   default = "vpc-0abae96f5ad67cf3d"
 }
 
+variable "route53_zone_id" {
+  description = "ID of the existing zone ID"
+  type = string
+  default = "Z0281442JLAR1WYASRZ3"
+}
