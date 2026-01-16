@@ -77,6 +77,10 @@ metadata:
   name: dnd-app-ing
   namespace: dnd-forum
   annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:731945947682:certificate/1e04433c-891a-46af-b316-ea06d340aaab
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    external-dns.alpha.kubernetes.io/hostname: forum.thegradyproject.com
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/healthcheck-path: /
@@ -85,12 +89,13 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-  - http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: dnd-app-svc
-            port:
-              number: 80
+    - host: forum.thegradyproject.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: dnd-app-svc
+              port:
+                number: 80
