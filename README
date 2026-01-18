@@ -1,3 +1,10 @@
+Firstly, an explanation on the name. I play D&D with my friends once a week, and a friend told me I should make a project using EKS aince I got
+my CKA and aws sysops cert. I agreed and decided to make a forum. Not only will I have a finished project to show, it will be functional too.
+I first tried to code my own, but that proved to be a waste of time, my friend simply told me to find a package. "It's not your job to code,
+you went into orchestration, find a package and hook up all the pieces." So that's what I did.  
+
+You need an AWS account and access to your aws through your terminal.
+
 You will find the image repo at https://github.com/Zaziben/dnd-forum-app
 
 footnotes labelled with a paranthesis (x) at the end of this document.
@@ -16,8 +23,7 @@ start static infrastructure, the stuff that doesn't change(1)
 
 in /statics, terraform apply
 
-This makes the s3 bucket, the rds instance, the cert to secure your sub domain. You will then need to create your database. This readme
-does not go over that step.
+This makes the s3 bucket, the rds instance, the cert to secure your sub domain. 
 
 start EKS cluster:
 
@@ -116,10 +122,13 @@ make controller and make external-dns are easy commands to perform to get the re
 
 (3): We are using a different alb every time, so we need an external DNS to change our routing table in route 53 to let us connect to our domain. This assumes 
 you already have a hosted zone you control in route53. We don't manually create the sub domain, the external-dns makes that for us when it reads your ingress, 
+A
 which you'll have to change into the domain you own.
 
 (4): I made the decision to rename the folder in the image run time because the phpbb server doesn't allow the forum to be used unless the
 install folder doesn't exist. Since I only need the install folder for installation, this made sense, you wouldn't want to change the folder every time.
+For those new to k8s: kubectl get pod -A, find your pod in the list. Then kubectl exec <podname> -it -n <namespace pod lives> -- bash. In the root directory 
+you will find the binstall folder, rename that to install and refresh the webpage. 
 
 (5): For installation to start, the config.php file must not exist at installation time. But you want to be able to automatically connect to the database on
 subsequent launches, therefore you create a secret to mount the config file, example above, to your container's filesystem. This
