@@ -1,3 +1,9 @@
+You will find the image repo at https://github.com/Zaziben/dnd-forum-app
+
+
+
+
+
 you need these helm chart repos:
 helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
 helm repo update
