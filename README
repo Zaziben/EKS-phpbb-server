@@ -1,28 +1,39 @@
 You will find the image repo at https://github.com/Zaziben/dnd-forum-app
 
+footnotes labelled with a paranthesis (x) at the end of this document.
 
 
 
+You need these helm chart repos, which you will input in order. you should wait until the controller webhooks finish, roughly 3-5 min before
+installing the external-dns. After that, you can apply the dnd-app-install.yaml. Once live, exec into the pod and rename the <binstall> folder 
+in the ~/html directory to <install>(1).
 
-you need these helm chart repos:
-helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
-helm repo update
+Connect to your database (install phpbb). Then delete the deployment, and apply the dnd-app.yaml file to make a new 
+deployment(2). Make sure you create a secret for your pod to mount the configs you just entered into your database, found below.
 
+You will need to replace my specific identifiers and credentials with your own using this repo.
 
+<<<<STEP BY STEP INSTRUCTIONS>>>>
 
+start static infrastructure, the stuff that doesn't change(3)
 
-helm install external-dns external-dns/external-dns \
-  -n kube-system \
-  --create-namespace \
-  --set provider=aws \
-  --set registry=txt \
-  --set txtOwnerId=eks-dnd \
-  --set domainFilters[0]=example.com \
-  --set policy=sync \
-  --set serviceAccount.create=true \
-  --set serviceAccount.name=external-dns \
-  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::$(AWS_ACC):role/external-dns
-  repo add eks https://aws.github.io/eks-charts
+in /statics, terraform apply
+
+This makes the s3 bucket, the rds instance, the cert to secure your sub domain. You will then need to create your database. This readme
+does not go over that step.
+
+start EKS cluster:
+
+in /infra, terraform apply 
+
+This makes the cluster and IAM IRSA permissions
+
+You can use the makefile to implement these commands(4)
+
+You need to connect to the cluster:
+aws eks update-kubeconfig --region $(AWS_REGION) --name $(EKS_CLUSTER_NAME)
+
+Install the aws controller:
 
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update
@@ -36,4 +47,74 @@ helm repo update
     --set region=$(AWS_REGION) \
     --set vpcId=$(VPC_ID)
 
+---wait for webhooks to finalize, 3-5 minutes---
 
+Install the external DNS (5)
+helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+ add external-dns https://kubernetes-sigs.github.io/external-dns/
+helm repo update
+
+kubectl create ns xxxx (the namespace you are going to put your app deployment)
+helm install external-dns external-dns/external-dns \
+  -n kube-system \
+  --set policy=upsert-only \
+  --set provider=aws \
+  --set registry=txt \
+  --set sources[0]=ingress \
+  --set namespace=xxxx \ # same namespace you are creating in above line
+  --set policy=sync \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=external-dns \
+  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::$(AWS_ACC):role/external-dns
+
+example secret:
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+  namespace: forum
+stringData:
+  config.php: |
+    <?php
+    $dbms = 'phpbb\\db\\driver\\postgres'; # xxxx can be postgres, mysql, whatever db vendor you are using
+    $dbhost = 'forum-postgres.xxxxxx.us-east-1.rds.amazonaws.com'; # replace my entry with your db hostname
+    $dbport = 'xxxx';
+    $dbname = 'xxxxxxx';
+    $dbuser = 'xxxxxxx';
+    $dbpasswd = 'xxxxxxx';
+    $table_prefix = 'phpbb_';
+    $phpbb_adm_relative_path = 'adm/';
+    $acm_type = 'phpbb\\cache\\driver\\file';
+
+    @define('PHPBB_INSTALLED', true);
+    @define('PHPBB_ENVIRONMENT', 'production');
+    // @define('DEBUG_CONTAINER', true);
+
+Now launch your deployment. For example, for my app, I would input kubectl apply -f dnd-app-install.yaml (from the prod directory), and after installation,
+I would enter kubectl apply -f dnd-app.yaml. Or just use my makefile. 
+
+Once live, exec into the pod and rename the <binstall> folder
+in the ~/html directory to <install>(4).
+
+Connect to your database (install phpbb). Then delete the deployment, and apply the dnd-app.yaml file to make a new
+deployment(5). Make sure you create a secret for your pod to mount the configs you just entered into your database, found above.
+
+(1): You can simply start and stop the database with the makefile
+
+make start-db 
+	aws rds start-db-instance --db-instance-identifier $(DB_IDER)
+
+make stop-db
+	aws rds stop-db-instance --db-instance-identifier $(DB_IDER)
+
+(2): Credentials you might see in the makefile were for my cluster. I have since rotated them. I did not make a fresh repo so you can see my work. I should have
+found a different way to hide my credentials, but this is my first really real project. You live and learn.
+
+(3): We are using a different alb every time, so we need an external DNS to change our routing table in route 53 to let us connect to our domain. This assumes
+you already have a hosted zone you control in route53. 
+
+(4): I made the decision to rename the folder in the image run time because the phpbb server doesn't allow the forum to be used unless the
+install folder doesn't exist. Since I only need the install folder for installation, this made sense, you wouldn't want to change the folder every time.
+
+(5): For installation to work, the config.php file must not exist at installation time. But you want to be able to automatically connect to the database on subsequent launches, therefore you create a secret to mount the config file, example above, to your container's filesystem. This
+is already done for you with dnd-app.yaml.

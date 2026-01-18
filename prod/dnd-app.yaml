@@ -7,14 +7,6 @@ metadata:
     # This ARN comes from the IRSA IAM role you created in Terraform
     eks.amazonaws.com/role-arn: arn:aws:iam::731945947682:role/eks-s3-phpbb-access-role
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: alb-dnd-sa
-  namespace: kube-system
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::731945947682:role/aws-load-balancer-controller
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

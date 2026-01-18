@@ -52,6 +52,7 @@ resource "aws_db_instance" "dnd_postgres" {
   backup_retention_period = 7
   multi_az                = false
   storage_encrypted       = true
+  apply_immediately       = true
 
 
   tags = {
@@ -78,10 +79,10 @@ resource "aws_s3_bucket_ownership_controls" "ownershipdnd" {
 resource "aws_s3_bucket_public_access_block" "pbdnd" {
   bucket = aws_s3_bucket.s3.id
 
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 resource "aws_s3_bucket_acl" "acldnd" {

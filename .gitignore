@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ignore Terraform plugin caches and state backups
 statics/.terraform/
 infra/.terraform/
@@ -6,24 +5,5 @@ infra/.terraform/
 *.tfstate
 *.tfstate.backup
 
-# Optional: ignore crash logs or override files
-crash.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Ignore local credentials (if any)
-*.pem
-*.key
-*.env
-
-# Ignore OS-specific files
-.DS_Store
-Thumbs.db
-
-# Ignore IDE configs (optional)
-.vscode/
-.idea/
-
 prod/secret.yaml
+
