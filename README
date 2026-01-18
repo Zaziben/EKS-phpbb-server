@@ -1,7 +1,8 @@
-Firstly, an explanation on the name. I play D&D with my friends once a week, and a friend told me I should make a project using EKS aince I got
+Firstly, an explanation on why. I play D&D with my friends once a week, and a friend told me I should make a project using EKS aince I got
 my CKA and aws sysops cert. I agreed and decided to make a forum. Not only will I have a finished project to show, it will be functional too.
 I first tried to code my own, but that proved to be a waste of time, my friend simply told me to find a package. "It's not your job to code,
-you went into orchestration, find a package and hook up all the pieces." So that's what I did.  
+you went into orchestration, find a package and hook up all the pieces." So that's what I did. The hardest part was getting mountpoint to work.
+Below are instructions to use this repo.
 
 You need an AWS account and access to your aws through your terminal.
 
@@ -23,7 +24,7 @@ start static infrastructure, the stuff that doesn't change(1)
 
 in /statics, terraform apply
 
-This makes the s3 bucket, the rds instance, the cert to secure your sub domain. 
+This makes the s3 bucket, the rds instance, and the cert to secure your sub domain. 
 
 start EKS cluster:
 
@@ -40,7 +41,6 @@ Install the aws controller:
 
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update
-
 
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \      
     -n kube-system \
@@ -104,6 +104,7 @@ in the ~/html directory to <install>(4).
 Install phpbb onto your database. Then delete the deployment. Make sure you create a secret for your pod to mount the configs you just entered into your
 database, found above, and apply the dnd-app.yaml file to make a new deployment(5)(6) 
 
+When tearing down the environment, delete the ingress before you destroy your cluster to prevent orphaned load balancers.
 
 ----------
 
@@ -116,13 +117,12 @@ make stop-db
 	aws rds stop-db-instance --db-instance-identifier $(DB_IDER)
 
 (2): Credentials you might see in the makefile were for my cluster. I have since rotated them. I did not make a fresh repo so you can see my work. I should
-have found a different way to hide my credentials, but this is my first really real project. You live and learn.
+have hid the file or found a different solution, but this is my first really real project. You live and learn.
 
 make controller and make external-dns are easy commands to perform to get the required connections ready.
 
 (3): We are using a different alb every time, so we need an external DNS to change our routing table in route 53 to let us connect to our domain. This assumes 
 you already have a hosted zone you control in route53. We don't manually create the sub domain, the external-dns makes that for us when it reads your ingress, 
-A
 which you'll have to change into the domain you own.
 
 (4): I made the decision to rename the folder in the image run time because the phpbb server doesn't allow the forum to be used unless the
