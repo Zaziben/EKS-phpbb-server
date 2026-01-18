@@ -1,6 +1,9 @@
 # ignore Terraform plugin caches and state backups
-statics/.terraform/
+statics/.terraform.lock.hcl
+statics/terraform.tfstate
+statics/terraform.tfstate.backup
 infra/.terraform/
+infra/.terraform.lock.hcl
 **/.terraform/
 *.tfstate
 *.tfstate.backup
