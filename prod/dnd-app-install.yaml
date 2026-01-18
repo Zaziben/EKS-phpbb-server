@@ -1,0 +1,97 @@
+# you will need to change the binstall directory to install on the container
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dnd-sa
+  namespace: dnd-forum
+  annotations:
+    # This ARN comes from the IRSA IAM role you created in Terraform
+    eks.amazonaws.com/role-arn: arn:aws:iam::731945947682:role/eks-s3-phpbb-access-role
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alb-dnd-sa
+  namespace: kube-system
+  annotations:
+    # This ARN comes from the IRSA IAM role you created in Terraform
+    eks.amazonaws.com/role-arn: arn:aws:iam::731945947682:role/aws-load-balancer-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dnd-app
+  namespace: dnd-forum
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnd-app
+  template:
+    metadata:
+      labels:
+        app: dnd-app
+    spec:
+      serviceAccountName: dnd-sa
+      containers:
+        - name: dnd-app
+          image: 731945947682.dkr.ecr.us-east-1.amazonaws.com/dnd-forum:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: fuse
+              mountPath: /dev/fuse
+          securityContext: 
+            privileged: true
+      volumes:
+        - name: phpbb-config
+          secret:
+            secretName: db-secret
+        - name: fuse
+          hostPath:
+            path: /dev/fuse
+            type: CharDevice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnd-app-svc
+  namespace: dnd-forum
+spec:
+  selector:
+    app: dnd-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80 # Port exposed in your Dockerfile
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dnd-app-ing
+  namespace: dnd-forum
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    # The certificate arn made by Terraform
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:731945947682:certificate/1e04433c-891a-46af-b316-ea06d340aaab
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    external-dns.alpha.kubernetes.io/hostname: forum.thegradyproject.com
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: '80'
+    alb.ingress.kubernetes.io/success-codes: "200,302"
+spec:
+  ingressClassName: alb
+  rules:
+    - host: forum.thegradyproject.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: dnd-app-svc
+              port:
+                number: 80
