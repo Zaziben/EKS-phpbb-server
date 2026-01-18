@@ -3,19 +3,16 @@ You will find the image repo at https://github.com/Zaziben/dnd-forum-app
 footnotes labelled with a paranthesis (x) at the end of this document.
 
 
-
-You need these helm chart repos, which you will input in order. you should wait until the controller webhooks finish, roughly 3-5 min before
-installing the external-dns. After that, you can apply the dnd-app-install.yaml. Once live, exec into the pod and rename the <binstall> folder 
-in the ~/html directory to <install>(1).
-
-Connect to your database (install phpbb). Then delete the deployment, and apply the dnd-app.yaml file to make a new 
-deployment(2). Make sure you create a secret for your pod to mount the configs you just entered into your database, found below.
+This repo has everyting you need to create a fully ephemeral, secure phpbb web server, except for the domain name, you'll have to configure one
+with route 53. S3 manages media storage such as avatars and attachments, and the database manages everything else, making this a truly stateless
+forum. It was never designed for thousands of users, however, you'll have to probabaly configure an rds proxy and a cdn if you are, but those 
+would easily slot into the terraform in /statics. 
 
 You will need to replace my specific identifiers and credentials with your own using this repo.
 
 <<<<STEP BY STEP INSTRUCTIONS>>>>
 
-start static infrastructure, the stuff that doesn't change(3)
+start static infrastructure, the stuff that doesn't change(1)
 
 in /statics, terraform apply
 
@@ -28,7 +25,7 @@ in /infra, terraform apply
 
 This makes the cluster and IAM IRSA permissions
 
-You can use the makefile to implement these commands(4)
+You can use the makefile to implement these commands(2)
 
 You need to connect to the cluster:
 aws eks update-kubeconfig --region $(AWS_REGION) --name $(EKS_CLUSTER_NAME)
@@ -39,17 +36,20 @@ helm repo add eks https://aws.github.io/eks-charts
 helm repo update
 
 
-  helm install aws-load-balancer-controller eks/aws-load-balancer-controller \      
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \      
     -n kube-system \
-    --set clusterName=$(EKS_CLUSTER_NAME) \
-    --set serviceAccount.create=false \
-    --set serviceAccount.name=alb-dnd-sa \
-    --set region=$(AWS_REGION) \
+    --set region=$(AWS_REGION)
     --set vpcId=$(VPC_ID)
+    --set clusterName=$(EKS_CLUSTER_NAME) \
+    --set namespace=kube-system \
+    --set serviceAccount.create=true \
+    --set serviceAccount.name=alb-dnd-sa \
+    --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::$(AWS_ACC):role/aws-load-balancer-controller
 
----wait for webhooks to finalize, 3-5 minutes---
+---wait for webhooks to finalize, 3 minutes---
 
-Install the external DNS (5)
+Install the external DNS (3)
+
 helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
  add external-dns https://kubernetes-sigs.github.io/external-dns/
 helm repo update
@@ -90,14 +90,16 @@ stringData:
     @define('PHPBB_ENVIRONMENT', 'production');
     // @define('DEBUG_CONTAINER', true);
 
-Now launch your deployment. For example, for my app, I would input kubectl apply -f dnd-app-install.yaml (from the prod directory), and after installation,
-I would enter kubectl apply -f dnd-app.yaml. Or just use my makefile. 
+First, you must install phpbb onto the database, so input kubectl apply -f dnd-app-install.yaml from ~/prod
 
-Once live, exec into the pod and rename the <binstall> folder
+Once live for the first time, exec into the pod and rename the <binstall> folder
 in the ~/html directory to <install>(4).
 
-Connect to your database (install phpbb). Then delete the deployment, and apply the dnd-app.yaml file to make a new
-deployment(5). Make sure you create a secret for your pod to mount the configs you just entered into your database, found above.
+Install phpbb onto your database. Then delete the deployment. Make sure you create a secret for your pod to mount the configs you just entered into your
+database, found above, and apply the dnd-app.yaml file to make a new deployment(5)(6) 
+
+
+----------
 
 (1): You can simply start and stop the database with the makefile
 
@@ -107,14 +109,20 @@ make start-db
 make stop-db
 	aws rds stop-db-instance --db-instance-identifier $(DB_IDER)
 
-(2): Credentials you might see in the makefile were for my cluster. I have since rotated them. I did not make a fresh repo so you can see my work. I should have
-found a different way to hide my credentials, but this is my first really real project. You live and learn.
+(2): Credentials you might see in the makefile were for my cluster. I have since rotated them. I did not make a fresh repo so you can see my work. I should
+have found a different way to hide my credentials, but this is my first really real project. You live and learn.
 
-(3): We are using a different alb every time, so we need an external DNS to change our routing table in route 53 to let us connect to our domain. This assumes
-you already have a hosted zone you control in route53. 
+make controller and make external-dns are easy commands to perform to get the required connections ready.
+
+(3): We are using a different alb every time, so we need an external DNS to change our routing table in route 53 to let us connect to our domain. This assumes 
+you already have a hosted zone you control in route53. We don't manually create the sub domain, the external-dns makes that for us when it reads your ingress, 
+which you'll have to change into the domain you own.
 
 (4): I made the decision to rename the folder in the image run time because the phpbb server doesn't allow the forum to be used unless the
 install folder doesn't exist. Since I only need the install folder for installation, this made sense, you wouldn't want to change the folder every time.
 
-(5): For installation to work, the config.php file must not exist at installation time. But you want to be able to automatically connect to the database on subsequent launches, therefore you create a secret to mount the config file, example above, to your container's filesystem. This
+(5): For installation to start, the config.php file must not exist at installation time. But you want to be able to automatically connect to the database on
+subsequent launches, therefore you create a secret to mount the config file, example above, to your container's filesystem. This
 is already done for you with dnd-app.yaml.
+
+(6): For future deployments, after the controller and external-dns is created, a simple <make app> command is simpler than the kubectl inputs.
