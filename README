@@ -1,27 +1,27 @@
 This repo has everyting you need to create a fully ephemeral, secure phpbb web server, except for the domain name, you'll have to configure one
 with route 53. S3 manages media storage such as avatars and attachments, and the database manages everything else, making this a truly stateless
 forum. It was never designed for thousands of users, however, you'll have to probabaly configure an rds proxy and a cdn if you are, but those 
-would easily slot into the terraform in /statics. I am  working on getting an APM on it.
+would easily slot into the terraform in /statics. I am also working on getting an APM on it.
 
 You need an AWS account and access to your aws through your terminal.
 
 You will find the image repo at https://github.com/Zaziben/dnd-forum-app
 
-footnotes labelled with a paranthesis (x) at the end of this document.
+Footnotes labelled with a paranthesis (x) at the end of this document.
 
 You will need to replace my identifiers and credentials with your own using this repo.
 
 <<<<STEP BY STEP INSTRUCTIONS>>>>
 
-start static infrastructure, the stuff that doesn't change(1)
+Start static infrastructure, the stuff that doesn't change(1)
 
-in /statics, terraform apply
+In /statics, terraform apply
 
 This makes the s3 bucket, the rds instance, and the cert to secure your sub domain. 
 
-start EKS cluster:
+Start EKS cluster:
 
-in /infra, terraform apply 
+In /infra, terraform apply 
 
 This makes the cluster and IAM IRSA permissions
 
@@ -91,17 +91,16 @@ stringData:
 
 First, you must install phpbb onto the database, so input kubectl apply -f dnd-app-install.yaml from ~/prod
 
-Once live for the first time, exec into the pod and rename the <binstall> folder
-in the ~/html directory to <install>(4).
+Once live for the first time, exec into the pod and rename the <binstall> folder in the ~/html directory to <install>(4).
 
-Install phpbb onto your database. Then delete the deployment. Make sure you create a secret for your pod to mount the configs you just entered into your
-database, found above, and apply the dnd-app.yaml file to make a new deployment(5)(6) 
+Install phpbb onto your database. Then delete the deployment. Make sure you create a secret for your pod to mount the configs you just entered
+into your database, found above, and apply the dnd-app.yaml file to make a new deployment(5)(6) 
 
 When tearing down the environment, delete the ingress before you destroy your cluster to prevent orphaned load balancers.
 
 ----------
 
-(1): You can simply start and stop the database with the makefile
+(1): You can simply start and stop the database with the makefile. 
 
 make start-db 
 	aws rds start-db-instance --db-instance-identifier $(DB_IDER)
@@ -109,8 +108,7 @@ make start-db
 make stop-db
 	aws rds stop-db-instance --db-instance-identifier $(DB_IDER)
 
-(2): Credentials you might see in the makefile were for my cluster. I have since rotated them. I did not make a fresh repo so you can see my work. I should
-have hid the file or found a different solution, but this is my first really real project. You live and learn.
+(2): The makefile provided is simply a template, you'll have to sub in your credentials. You can get make through the normal apt-get/scoop/winget means
 
 make controller and make external-dns are easy commands to perform to get the required connections ready.
 
